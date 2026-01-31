@@ -2,7 +2,7 @@ fastapi
 uvicorn
 joblib
 pandas
-numpy
 lightgbm
 scikit-learn==1.8.0
-shap
+numpy==1.24.3
+shap==0.42.1
