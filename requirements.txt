@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+joblib
+pandas
+numpy
+lightgbm
+scikit-learn==1.8.0
