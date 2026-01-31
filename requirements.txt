@@ -5,3 +5,4 @@ pandas
 numpy
 lightgbm
 scikit-learn==1.8.0
+shap

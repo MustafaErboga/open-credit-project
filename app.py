@@ -4,8 +4,25 @@ import joblib
 import pandas as pd
 from pydantic import BaseModel
 import numpy as np
+import shap
 
 app = FastAPI(title="OpenCredit: Transparent Scoring API")
+
+model = joblib.load("models/final_safe_model.joblib")
+features = joblib.load("models/final_features.joblib")
+
+explainer = shap.TreeExplainer(model)
+
+class Customer(BaseModel):
+    Outstanding_Debt: float
+    Interest_Rate: float
+    Delay_from_due_date: int
+    Num_of_Delayed_Payment: int
+    Credit_Mix: int
+    Annual_Income: float
+    Monthly_Balance: float
+    Num_Credit_Inquiries: int
+    Age: float
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -96,13 +113,24 @@ def predict(data: Customer):
     probs = model.predict_proba(input_df)[0]
     res_index = int(np.argmax(probs))
     class_map = {0: "Poor", 1: "Standard", 2: "Good"}
+    shap_values = explainer.shap_values(input_df)
+    current_shap = shap_values[res_index][0] 
+    feature_importance = dict(zip(features, current_shap))
+    top_explanations = sorted(feature_importance.items(), key=lambda x: abs(x[1]), reverse=True)[:3]
+
     
     return {
         "prediction": class_map[res_index],
         "confidence_score": round(float(np.max(probs)), 4),
+        "explanation": {
+            "top_drivers": [
+                {"feature": feat, "impact": "Positive" if val > 0 else "Negative"} 
+                for feat, val in top_explanations
+            ]
+        },
         "probabilities": {
-            "Poor (Class 0)": round(float(probs[0]), 4),
-            "Standard (Class 1)": round(float(probs[1]), 4),
-            "Good (Class 2)": round(float(probs[2]), 4)
+            "Poor": round(float(probs[0]), 4),
+            "Standard": round(float(probs[1]), 4),
+            "Good": round(float(probs[2]), 4)
         }
     }
