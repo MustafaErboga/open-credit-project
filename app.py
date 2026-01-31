@@ -113,8 +113,12 @@ def predict(data: Customer):
     probs = model.predict_proba(input_df)[0]
     res_index = int(np.argmax(probs))
     class_map = {0: "Poor", 1: "Standard", 2: "Good"}
-    shap_values = explainer.shap_values(input_df)
-    current_shap = shap_values[res_index][0] 
+    shap_results = explainer.shap_values(input_df)
+    if isinstance(shap_results, list):
+        current_shap = shap_results[res_index][0]
+    else:
+        # Bazı durumlarda tek bir array döner
+        current_shap = shap_results[0]
     feature_importance = dict(zip(features, current_shap))
     top_explanations = sorted(feature_importance.items(), key=lambda x: abs(x[1]), reverse=True)[:3]
 
