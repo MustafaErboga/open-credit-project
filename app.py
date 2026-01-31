@@ -4,25 +4,8 @@ import joblib
 import pandas as pd
 from pydantic import BaseModel
 import numpy as np
-import shap
 
 app = FastAPI(title="OpenCredit: Transparent Scoring API")
-
-model = joblib.load("models/final_safe_model.joblib")
-features = joblib.load("models/final_features.joblib")
-
-explainer = shap.TreeExplainer(model)
-
-class Customer(BaseModel):
-    Outstanding_Debt: float
-    Interest_Rate: float
-    Delay_from_due_date: int
-    Num_of_Delayed_Payment: int
-    Credit_Mix: int
-    Annual_Income: float
-    Monthly_Balance: float
-    Num_Credit_Inquiries: int
-    Age: float
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -32,47 +15,12 @@ def read_root():
         <head>
             <title>OpenCredit API</title>
             <style>
-                body { 
-                    font-family: 'Segoe UI', sans-serif; 
-                    background-color: #0d1117; 
-                    color: #ffffff; 
-                    text-align: center; 
-                    padding: 100px 20px;
-                    margin: 0;
-                }
-                .card {
-                    background-color: #161b22;
-                    border: 1px solid #30363d;
-                    border-radius: 12px;
-                    padding: 40px;
-                    display: inline-block;
-                    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-                    max-width: 550px;
-                }
+                body { font-family: 'Segoe UI', sans-serif; background-color: #0d1117; color: #ffffff; text-align: center; padding: 100px 20px; margin: 0; }
+                .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 40px; display: inline-block; box-shadow: 0 8px 24px rgba(0,0,0,0.5); max-width: 550px; }
                 h1 { color: #238636; margin-bottom: 10px; }
                 p { color: #8b949e; font-size: 1.1em; line-height: 1.6; }
-                .status-badge {
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    background-color: rgba(35, 134, 54, 0.2);
-                    color: #3fb950;
-                    font-size: 0.85em;
-                    font-weight: 600;
-                    border: 1px solid rgba(63, 185, 80, 0.3);
-                    margin-bottom: 20px;
-                }
-                .btn {
-                    display: inline-block;
-                    margin-top: 25px;
-                    padding: 12px 30px;
-                    background-color: #238636;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    transition: 0.2s;
-                }
+                .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background-color: rgba(35, 134, 54, 0.2); color: #3fb950; font-size: 0.85em; font-weight: 600; border: 1px solid rgba(63, 185, 80, 0.3); margin-bottom: 20px; }
+                .btn { display: inline-block; margin-top: 25px; padding: 12px 30px; background-color: #238636; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; transition: 0.2s; }
                 .btn:hover { background-color: #2ea043; }
                 .footer { margin-top: 60px; font-size: 0.8em; color: #484f58; }
             </style>
@@ -81,14 +29,10 @@ def read_root():
             <div class="card">
                 <div class="status-badge">● System Online</div>
                 <h1>OpenCredit Scoring System</h1>
-                <p>An end-to-end explainable credit risk assessment API powered by LightGBM and SHAP.</p>
-                <p>This service provides real-time credit scoring and probability distributions for financial risk management.</p>
-                
+                <p>An end-to-end explainable credit risk assessment API powered by LightGBM.</p>
                 <a href="/docs" class="btn">Explore API Documentation</a>
             </div>
-            <div class="footer">
-                Developed by Mustafa Erboga | MLOps Engineering Project
-            </div>
+            <div class="footer">Developed by Mustafa Erboga | MLOps Engineering Project</div>
         </body>
     </html>
     """
@@ -113,21 +57,10 @@ def predict(data: Customer):
     probs = model.predict_proba(input_df)[0]
     res_index = int(np.argmax(probs))
     class_map = {0: "Poor", 1: "Standard", 2: "Good"}
-    shap_results = explainer(input_df, check_additivity=False)
-    current_shap = shap_results.values[0][res_index]
-    feature_importance = dict(zip(features, current_shap))
-    top_explanations = sorted(feature_importance.items(), key=lambda x: abs(x[1]), reverse=True)[:3]
-
     
     return {
         "prediction": class_map[res_index],
         "confidence_score": round(float(np.max(probs)), 4),
-        "explanation": {
-            "top_drivers": [
-                {"feature": feat, "impact": "Positive" if val > 0 else "Negative"} 
-                for feat, val in top_explanations
-            ]
-        },
         "probabilities": {
             "Poor": round(float(probs[0]), 4),
             "Standard": round(float(probs[1]), 4),
