@@ -29,21 +29,22 @@ def train_balanced_model():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    # --- HASSAS AYAR (FINE TUNING) ---
-    # Ağırlıkları biraz daha artırıyoruz: 
-    # Poor'u koruyoruz (2.5), Good'u iyice belirginleştiriyoruz (4.0)
+    # FINE TUNING
+    
     model = lgb.LGBMClassifier(
         n_estimators=1000,
-        learning_rate=0.01,        # Daha da yavaşlattık (daha iyi öğrensin)
+        learning_rate=0.01,        
+        subsample=0.8,             
+        colsample_bytree=0.8,      
         class_weight={0: 2.5, 1: 1.0, 2: 4.0}, 
-        max_depth=10,              # Derinliği biraz artırdık
+        max_depth=10,              
         num_leaves=64,
         random_state=42,
         verbose=-1
     )
     model.fit(X_train, y_train)
 
-    # --- KOD İÇİ DOĞRULAMA ---
+    # SYSTEM CALIBRATION TEST
     scenarios = {
         "Zengin (Good)": [50.0, 3.0, 0, 0, 2, 200000.0, 8000.0, 0, 45],
         "Ortalama (Standard)": [1500.0, 15.0, 7, 4, 1, 55000.0, 1200.0, 5, 33],
@@ -51,7 +52,7 @@ def train_balanced_model():
     }
 
     print("\n" + "="*45)
-    print("SİSTEM KALİBRASYON TESTİ")
+    print("SYSTEM CALIBRATION TEST")
     print("="*45)
 
     for name, vals in scenarios.items():
